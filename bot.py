@@ -1,6 +1,9 @@
 import os
+import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
+import discord
+from discord.ext import commands
 
 class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -35,6 +38,54 @@ async def ping(ctx):
 @bot.command(name="vinted")
 async def vinted_command(ctx):
     await ctx.send("Cześć! Jestem gotowy do monitorowania Vinted. Wkrótce dodam tu wyszukiwanie ogłoszeń!")
+
+@bot.command(name="vinted")
+async def vinted_search(ctx, *, query: str = "nike"):
+    """Przeszukuje Vinted na podstawie podanej frazy"""
+    await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
+    
+    # Oficjalny endpoint katalogu Vinted z parametrami wyszukiwania
+    url = f"https://www.vinted.pl/api/v2/catalog/items?search_text={query}&per_page=3"
+    
+    # Vinted wymaga nagłówków przeglądarki, inaczej zablokuje zapytanie
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            items = data.get("items", [])
+            
+            if not items:
+                await ctx.send("❌ Nie znaleziono żadnych przedmiotów dla tej frazy.")
+                return
+            
+            # Wyślij 3 pierwsze znalezione przedmioty
+            for item in items[:3]:
+                title = item.get("title")
+                price = item.get("price")
+                currency = item.get("currency")
+                item_id = item.get("id")
+                # Budujemy link do ogłoszenia
+                item_url = f"https://www.vinted.pl/items/{item_id}"
+                
+                # Pobieramy zdjęcie jeśli istnieje
+                photo = item.get("photo", {})
+                photo_url = photo.get("url") if photo else None
+                
+                # Tworzymy ładną wiadomość
+                message = f"**{title}**\n💰 Cena: **{price} {currency}**\n🔗 [Zobacz ogłoszenie]({item_url})"
+                if photo_url:
+                    message += f"\n{photo_url}"
+                
+                await ctx.send(message)
+        else:
+            await ctx.send("⚠️ Wystąpił problem podczas połączenia z Vinted (kod błędu API).")
+    except Exception as e:
+        await ctx.send(f"❌ Wystąpił błąd techniczny: {e}")
 
 # Uruchomienie bota
 TOKEN = os.getenv("DISCORD_TOKEN")
