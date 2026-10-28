@@ -36,10 +36,6 @@ async def ping(ctx):
     await ctx.send("Pong! Bot Vinted działa w chmurze 24/7 bez problemów z Cloudflare.")
 
 @bot.command(name="vinted")
-async def vinted_command(ctx):
-    await ctx.send("Cześć! Jestem gotowy do monitorowania Vinted. Wkrótce dodam tu wyszukiwanie ogłoszeń!")
-
-@bot.command(name="vinted")
 async def vinted_search(ctx, *, query: str = "nike"):
     """Przeszukuje Vinted na podstawie podanej frazy"""
     await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
