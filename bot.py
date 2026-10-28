@@ -35,6 +35,7 @@ async def ping(ctx):
 @bot.command(name=vinted")
 async def vinted_command(ctx):
     await ctx.send("Cześć! Jestem gotowy do monitorowania Vinted. Wkrótce dodam tu wyszukiwanie ogłoszeń!")
+
 # Uruchomienie bota
 TOKEN = os.getenv("DISCORD_TOKEN")
 if __name__ == "__main__":
