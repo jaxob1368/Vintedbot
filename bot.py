@@ -31,8 +31,8 @@ async def on_ready():
 @bot.command(name="ping")
 async def ping(ctx):
     await ctx.send("Pong! Bot Vinted działa w chmurze 24/7 bez problemów z Cloudflare.")
-# TUTAJ DODAJ NOWĄ KOMENDĘ:
-@bot.command(name=vinted")
+
+@bot.command(name="vinted")
 async def vinted_command(ctx):
     await ctx.send("Cześć! Jestem gotowy do monitorowania Vinted. Wkrótce dodam tu wyszukiwanie ogłoszeń!")
 
