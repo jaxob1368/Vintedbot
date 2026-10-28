@@ -32,7 +32,6 @@ async def ping(ctx):
     await ctx.send("Pong! Bot Vinted działa w chmurze 24/7 bez problemów z Cloudflare.")
 
 # Uruchomienie bota
-TOKEN = "MTU2NTA0OTA3MjEzNjYxODAyNA.G_xsyR.8D3a3cx6tfLPj2B22vj8byl7J7R6rsvMbp2iK4"
-
+TOKEN = os.getenv("DISCORD_TOKEN")
 if __name__ == "__main__":
     bot.run(TOKEN)
