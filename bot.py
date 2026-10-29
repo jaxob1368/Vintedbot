@@ -37,16 +37,22 @@ async def ping(ctx):
 
 @bot.command(name="vinted")
 async def vinted_search(ctx, *, query: str = "nike"):
-    """Przeszukuje Vinted przez alternatywne API"""
+    """Przeszukuje Vinted używając nagłówków mobilnych"""
     await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
     
     url = f"https://www.vinted.pl/api/v2/catalog/items?search_text={query}&per_page=3"
     
-    # Używamy stabilniejszego proxy corsproxy.io
-    proxy_url = f"https://corsproxy.io/?{requests.utils.quote(url)}"
+    # Używamy nagłówków aplikacji mobilnej Vinted - omijają większość blokad Cloudflare
+    headers = {
+        "User-Agent": "Vinted/22.2.1 (cz.ian.vinted; android: 30;)",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "pl-PL,pl;q=0.9",
+        "Host": "www.vinted.pl"
+    }
     
     try:
-        response = requests.get(proxy_url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
+        
         if response.status_code == 200:
             data = response.json()
             items = data.get("items", [])
@@ -63,7 +69,7 @@ async def vinted_search(ctx, *, query: str = "nike"):
                 item_url = f"https://www.vinted.pl/items/{item_id}"
                 
                 photo = item.get("photo", {})
-                photo_url = photo.get("photo_url") or (photo.get("url") if photo else None)
+                photo_url = photo.get("url") if photo else None
                 
                 message = f"**{title}**\n💰 Cena: **{price} {currency}**\n🔗 [Zobacz ogłoszenie]({item_url})"
                 if photo_url:
@@ -71,7 +77,7 @@ async def vinted_search(ctx, *, query: str = "nike"):
                 
                 await ctx.send(message)
         else:
-            await ctx.send(f"⚠️ Proxy zwróciło kod błędu: {response.status_code}")
+            await ctx.send(f"⚠️ Vinted zwróciło kod błędu: {response.status_code}")
     except Exception as e:
         await ctx.send(f"❌ Wystąpił błąd: {e}")
 
