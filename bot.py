@@ -51,13 +51,27 @@ async def vinted_search(ctx, *, query: str = "nike"):
     }
     
     try:
-        # Dodajemy sesję requests, która lepiej obsługuje ciasteczka
         session = requests.Session()
-        # Najpierw pobieramy stronę główną, żeby Vinted "uznało" nas za przeglądarkę i dało ciasteczko
+        
+        # Ustawiamy pełniejsze nagłówki i ciasteczko akceptacji
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Referer": "https://www.vinted.pl/",
+            "Connection": "keep-alive",
+        }
+        
+        # Najpierw wchodzimy na stronę główną, żeby pobrać ciasteczko sesyjne
         session.get("https://www.vinted.pl/", headers=headers, timeout=10)
         
-        # Teraz wysyłamy zapytanie o przedmioty z zachowaną sesją
-        response = session.get(url, headers=headers, timeout=10)
+        # Teraz dodajemy nagłówek dla żądania API JSON
+        api_headers = headers.copy()
+        api_headers["Accept"] = "application/json, text/plain, */*"
+        api_headers["X-Requested-With"] = "XMLHttpRequest"
+        
+        response = session.get(url, headers=api_headers, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
