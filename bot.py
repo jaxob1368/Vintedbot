@@ -40,19 +40,15 @@ async def vinted_search(ctx, *, query: str = "nike"):
     """Przeszukuje Vinted przez alternatywne API"""
     await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
     
-    # Używamy alternatywnego, publicznego endpointu, który omija blokadę 403
     url = f"https://www.vinted.pl/api/v2/catalog/items?search_text={query}&per_page=3"
     
-    # Używamy prostego zapytania przez darmowe proxy omijające Cloudflare
-    proxy_url = f"https://api.allorigins.win/get?url={requests.utils.quote(url)}"
+    # Używamy stabilniejszego proxy corsproxy.io
+    proxy_url = f"https://corsproxy.io/?{requests.utils.quote(url)}"
     
     try:
         response = requests.get(proxy_url, timeout=10)
         if response.status_code == 200:
-            import json
-            # AllOrigins zwraca zawartość w polu "contents" jako string JSON
-            json_data = response.json()
-            data = json.loads(json_data.get("contents", "{}"))
+            data = response.json()
             items = data.get("items", [])
             
             if not items:
@@ -75,7 +71,7 @@ async def vinted_search(ctx, *, query: str = "nike"):
                 
                 await ctx.send(message)
         else:
-            await ctx.send("⚠️ Nie udało się pobrać danych przez proxy.")
+            await ctx.send(f"⚠️ Proxy zwróciło kod błędu: {response.status_code}")
     except Exception as e:
         await ctx.send(f"❌ Wystąpił błąd: {e}")
 
