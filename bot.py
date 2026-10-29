@@ -37,44 +37,22 @@ async def ping(ctx):
 
 @bot.command(name="vinted")
 async def vinted_search(ctx, *, query: str = "nike"):
-    """Przeszukuje Vinted i wyświetla ogłoszenia"""
+    """Przeszukuje Vinted przez alternatywne API"""
     await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
     
-    # Używamy oficjalnego endpointu z parametrami
+    # Używamy alternatywnego, publicznego endpointu, który omija blokadę 403
     url = f"https://www.vinted.pl/api/v2/catalog/items?search_text={query}&per_page=3"
     
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "pl-PL,pl;q=0.9",
-        "Referer": "https://www.vinted.pl/"
-    }
+    # Używamy prostego zapytania przez darmowe proxy omijające Cloudflare
+    proxy_url = f"https://api.allorigins.win/get?url={requests.utils.quote(url)}"
     
     try:
-        session = requests.Session()
-        
-        # Ustawiamy pełniejsze nagłówki i ciasteczko akceptacji
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Referer": "https://www.vinted.pl/",
-            "Connection": "keep-alive",
-        }
-        
-        # Najpierw wchodzimy na stronę główną, żeby pobrać ciasteczko sesyjne
-        session.get("https://www.vinted.pl/", headers=headers, timeout=10)
-        
-        # Teraz dodajemy nagłówek dla żądania API JSON
-        api_headers = headers.copy()
-        api_headers["Accept"] = "application/json, text/plain, */*"
-        api_headers["X-Requested-With"] = "XMLHttpRequest"
-        
-        response = session.get(url, headers=api_headers, timeout=10)
-        
+        response = requests.get(proxy_url, timeout=10)
         if response.status_code == 200:
-            data = response.json()
+            import json
+            # AllOrigins zwraca zawartość w polu "contents" jako string JSON
+            json_data = response.json()
+            data = json.loads(json_data.get("contents", "{}"))
             items = data.get("items", [])
             
             if not items:
@@ -89,7 +67,7 @@ async def vinted_search(ctx, *, query: str = "nike"):
                 item_url = f"https://www.vinted.pl/items/{item_id}"
                 
                 photo = item.get("photo", {})
-                photo_url = photo.get("url") if photo else None
+                photo_url = photo.get("photo_url") or (photo.get("url") if photo else None)
                 
                 message = f"**{title}**\n💰 Cena: **{price} {currency}**\n🔗 [Zobacz ogłoszenie]({item_url})"
                 if photo_url:
@@ -97,9 +75,9 @@ async def vinted_search(ctx, *, query: str = "nike"):
                 
                 await ctx.send(message)
         else:
-            await ctx.send(f"⚠️ Vinted zwróciło kod blokady: {response.status_code}. Spróbuj za chwilę.")
+            await ctx.send("⚠️ Nie udało się pobrać danych przez proxy.")
     except Exception as e:
-        await ctx.send(f"❌ Wystąpił błąd techniczny: {e}")
+        await ctx.send(f"❌ Wystąpił błąd: {e}")
 
 # Uruchomienie bota
 TOKEN = os.getenv("DISCORD_TOKEN")
