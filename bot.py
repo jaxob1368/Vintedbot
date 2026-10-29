@@ -1,15 +1,12 @@
 import os
 import discord
 from discord.ext import commands
-from vinted_scraper import VintedScraper
+import requests
 
 # Konfiguracja bota
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Inicjalizacja scrapera Vinted (automatycznie radzi sobie z sesjami)
-vinted = VintedScraper("https://www.vinted.pl")
 
 @bot.event
 async def on_ready():
@@ -21,40 +18,51 @@ async def ping(ctx):
 
 @bot.command(name="vinted")
 async def vinted_search(ctx, *, query: str = "nike"):
-    """Przeszukuje Vinted za pomocą dedykowanej biblioteki"""
+    """Przeszukuje Vinted"""
     await ctx.send(f"🔍 Szukam na Vinted frazy: **{query}**...")
     
+    url = f"https://www.vinted.pl/api/v2/catalog/items?search_text={query}&per_page=3"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "pl-PL,pl;q=0.9",
+        "Referer": "https://www.vinted.pl/"
+    }
+    
     try:
-        # Wyszukiwanie przedmiotów przez oficjalny moduł
-        items = vinted.items.search(query, {"per_page": 3})
+        # Używamy darmowego i szybkiego publicznego proxy (corsproxy.io), które omija blokadę IP Render
+        proxy_url = f"https://corsproxy.io/?{requests.utils.quote(url)}"
+        response = requests.get(proxy_url, timeout=10)
         
-        if not items:
-            await ctx.send("❌ Nie znaleziono żadnych przedmiotów dla tej frazy.")
-            return
-        
-        for item in items[:3]:
-            # Obsługa różnych formatów zwracanych danych przez bibliotekę
-            title = getattr(item, "title", None) or item.get("title")
-            price = getattr(item, "price", None) or item.get("price")
-            currency = getattr(item, "currency", None) or item.get("currency", "PLN")
-            item_url = getattr(item, "url", None) or item.get("url")
+        if response.status_code == 200:
+            data = response.json()
+            items = data.get("items", [])
             
-            # Pobieranie zdjęcia
-            photo = getattr(item, "photo", None) or item.get("photo")
-            photo_url = None
-            if isinstance(photo, dict):
-                photo_url = photo.get("url")
-            elif hasattr(photo, "url"):
-                photo_url = photo.url
+            if not items:
+                await ctx.send("❌ Nie znaleziono żadnych przedmiotów dla tej frazy.")
+                return
+            
+            for item in items[:3]:
+                title = item.get("title")
+                price = item.get("price")
+                currency = item.get("currency")
+                item_id = item.get("id")
+                item_url = f"https://www.vinted.pl/items/{item_id}"
                 
-            message = f"**{title}**\n💰 Cena: **{price} {currency}**\n🔗 [Zobacz ogłoszenie]({item_url})"
-            if photo_url:
-                message += f"\n{photo_url}"
+                photo = item.get("photo", {})
+                photo_url = photo.get("url") if photo else None
                 
-            await ctx.send(message)
+                message = f"**{title}**\n💰 Cena: **{price} {currency}**\n🔗 [Zobacz ogłoszenie]({item_url})"
+                if photo_url:
+                    message += f"\n{photo_url}"
+                
+                await ctx.send(message)
+        else:
+            await ctx.send(f"⚠️ Vinted zwróciło kod błędu: {response.status_code}")
             
     except Exception as e:
-        await ctx.send(f"❌ Wystąpił błąd podczas pobierania ofert: {e}")
+        await ctx.send(f"❌ Wystąpił błąd: {e}")
 
 # Uruchomienie bota
 TOKEN = os.getenv("DISCORD_TOKEN")
